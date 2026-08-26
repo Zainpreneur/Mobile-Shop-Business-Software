@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("staff") // "admin" | "staff"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  sales Sale[]
+}
+
+model Supplier {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  products  Product[]
+  purchases Purchase[]
+}
+
+model Product {
+  id                Int      @id @default(autoincrement())
+  name              String
+  brand             String?
+  category          String   @default("phone") // "phone" | "accessory"
+  sku               String   @unique
+  imei              String?  @unique
+  costPrice         Float    @default(0)
+  sellingPrice      Float    @default(0)
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(3)
+  supplierId        Int?
+  supplier          Supplier? @relation(fields: [supplierId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  saleItems     SaleItem[]
+  purchaseItems PurchaseItem[]
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  sales   Sale[]
+  repairs RepairTicket[]
+}
+
+model Sale {
+  id            Int      @id @default(autoincrement())
+  invoiceNumber String   @unique
+  customerId    Int?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  userId        Int?
+  user          User?    @relation(fields: [userId], references: [id])
+  subtotal      Float
+  discount      Float    @default(0)
+  tax           Float    @default(0)
+  total         Float
+  paymentMethod String   @default("cash") // "cash" | "card" | "mobile_wallet"
+  status        String   @default("completed") // "completed" | "refunded"
+  createdAt     DateTime @default(now())
+
+  items SaleItem[]
+}
+
+model SaleItem {
+  id        Int   @id @default(autoincrement())
+  saleId    Int
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  total     Float
+}
+
+model Purchase {
+  id          Int      @id @default(autoincrement())
+  supplierId  Int?
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  totalCost   Float    @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  items PurchaseItem[]
+}
+
+model PurchaseItem {
+  id         Int      @id @default(autoincrement())
+  purchaseId Int
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitCost   Float
+  total      Float
+}
+
+model RepairTicket {
+  id               Int       @id @default(autoincrement())
+  ticketNumber     String    @unique
+  customerId       Int?
+  customer         Customer? @relation(fields: [customerId], references: [id])
+  deviceBrand      String?
+  deviceModel      String?
+  issueDescription String
+  status           String    @default("pending") // pending | in_progress | completed | delivered | cancelled
+  estimatedCost    Float?
+  actualCost       Float?
+  technician       String?
+  receivedAt       DateTime  @default(now())
+  completedAt      DateTime?
+  notes            String?
+}
